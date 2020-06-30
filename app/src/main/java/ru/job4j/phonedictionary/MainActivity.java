@@ -3,11 +3,9 @@ package ru.job4j.phonedictionary;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.Manifest;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -18,15 +16,13 @@ import android.view.MenuItem;
 import android.view.ViewGroup;
 import android.widget.SearchView;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private RecyclerView.Adapter<RecyclerView.ViewHolder> adapter;
-    private List<String> phones = new ArrayList<>();
+    private RecyclerView recycler;
+    private Store store = Store.getInstance();
     private int PERMISSION_REQUEST_CODE = 12;
 
 
@@ -34,13 +30,13 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        RecyclerView recycler = findViewById(R.id.phones);
+        recycler = findViewById(R.id.phones);
         recycler.setHasFixedSize(true);
         recycler.setLayoutManager(new LinearLayoutManager(this));
-        phones = new ArrayList<>();
-        adapter = new PhoneAdapter(phones);
-        recycler.setAdapter(adapter);
-        ActivityCompat.requestPermissions(MainActivity.this, new String[]{android.Manifest.permission.READ_CONTACTS}, PERMISSION_REQUEST_CODE);
+        recycler.setAdapter(new PhoneAdapter(store.getPhones()));
+        ActivityCompat.requestPermissions(MainActivity.this,
+                new String[]{android.Manifest.permission.READ_CONTACTS},
+                PERMISSION_REQUEST_CODE);
     }
 
     @Override
@@ -57,24 +53,7 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                phones.clear();
-                Cursor cursor = getContentResolver().query(
-                        ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                        new String[] {ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-                                ContactsContract.CommonDataKinds.Phone.NUMBER},
-                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " like '%" + newText + "%'",
-                        null,
-                        null);
-                try {
-                    while (cursor.moveToNext()) {
-                        String name = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
-                        String phone = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
-                        phones.add(name + " " + phone);
-                    }
-                    adapter.notifyDataSetChanged();
-                } finally {
-                    cursor.close();
-                }
+                recycler.setAdapter(new PhoneAdapter(Store.filter(store.getPhones(),newText)));
                 return true;
             }
         });
@@ -91,14 +70,14 @@ public class MainActivity extends AppCompatActivity {
 
                 if (permission.equals(android.Manifest.permission.READ_CONTACTS)) {
                     if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                        loadDic(phones);
+                        loadDic();
                     }
                 }
             }
         }
     }
 
-    private void loadDic(List<String> phones) {
+    private void loadDic() {
         Cursor cursor = getContentResolver().query(
                 ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                 new String[] {ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
@@ -109,9 +88,9 @@ public class MainActivity extends AppCompatActivity {
             while (cursor.moveToNext()) {
                 String name = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
                 String phone = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
-                phones.add(name + " " + phone);
+                store.getPhones().add(name + " " + phone);
             }
-            adapter.notifyDataSetChanged();
+            recycler.getAdapter().notifyDataSetChanged();
         } finally {
             cursor.close();
         }
