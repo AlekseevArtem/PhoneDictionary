@@ -22,7 +22,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private RecyclerView recycler;
-    private Store store = Store.getInstance();
+    private Store store;
     private int PERMISSION_REQUEST_CODE = 12;
 
 
@@ -33,7 +33,6 @@ public class MainActivity extends AppCompatActivity {
         recycler = findViewById(R.id.phones);
         recycler.setHasFixedSize(true);
         recycler.setLayoutManager(new LinearLayoutManager(this));
-        recycler.setAdapter(new PhoneAdapter(store.getPhones()));
         ActivityCompat.requestPermissions(MainActivity.this,
                 new String[]{android.Manifest.permission.READ_CONTACTS},
                 PERMISSION_REQUEST_CODE);
@@ -78,22 +77,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadDic() {
-        Cursor cursor = getContentResolver().query(
-                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-                new String[] {ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-                        ContactsContract.CommonDataKinds.Phone.NUMBER},
-                null,
-                null, null);
-        try {
-            while (cursor.moveToNext()) {
-                String name = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
-                String phone = cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER));
-                store.getPhones().add(name + " " + phone);
-            }
-            recycler.getAdapter().notifyDataSetChanged();
-        } finally {
-            cursor.close();
-        }
+        store = new Store(this);
+        recycler.setAdapter(new PhoneAdapter(store.getPhones()));
     }
 
     public static final class PhoneAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
